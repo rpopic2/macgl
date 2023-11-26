@@ -1,0 +1,12 @@
+[
+    {
+        "directory": "/Users/rpopic2/macgl",
+        "file": "*.cpp",
+        "command": "/usr/bin/clang++ -Wall -std=c++17"
+    },
+    {
+        "directory": "/Users/rpopic2/macgl",
+        "file": "*.c",
+        "command": "/usr/bin/clang -Wall -I."
+    }
+]
