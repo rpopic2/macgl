@@ -41,67 +41,6 @@ static void print_tex_data(unsigned char *tex_buf, int img_width, int img_height
 
 static unsigned char *read_png(const char *path,
         unsigned int *width, unsigned int *height, unsigned char *channels) {
-    png_structp png_ptr = NULL;
-    png_infop info_ptr = NULL;
-
-    FILE *fp = fopen(path, "rb");
-    if (!fp) {
-        printf("failed to open file %s\n", path);
-        return NULL;
-    }
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
-            NULL, NULL, NULL);
-    if (!png_ptr) {
-        printf("failed to create read struct\n");
-        fclose(fp);
-        return NULL;
-    }
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        printf("failed to create info struct\n");
-        png_destroy_read_struct(&png_ptr, NULL, NULL);
-        fclose(fp);
-        return NULL;
-    }
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        printf("failed to setjmp\n");
-        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-        fclose(fp);
-        return NULL;
-    }
-
-    png_init_io(png_ptr, fp);
-    png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
-    png_bytepp rows = png_get_rows(png_ptr, info_ptr);
-    unsigned int w = png_get_image_width(png_ptr, info_ptr);
-    unsigned int h = png_get_image_height(png_ptr, info_ptr);
-    unsigned char ch = png_get_channels(png_ptr, info_ptr);
-    unsigned char depth = png_get_bit_depth(png_ptr, info_ptr);
-    *width = w;
-    *height = h;
-    *channels = ch;
-
-    unsigned char *buf = malloc(w * h * ch);
-    if (!buf) {
-        printf("malloc failed\n");
-        return NULL;
-    }
-    unsigned char *ptr = buf;
-    size_t row_bytes = w * ch;
-    for (size_t i = h; i-- > 0;) {
-        for (size_t j = 0; j < row_bytes; ++j) {
-            *ptr++ = rows[i][j];
-        }
-    }
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-    fclose(fp);
-    printf("load %s w: %d, h: %d, ch: %d depth: %d\n", path, w, h, ch, depth);
-
-    return buf;
-}
-
-static unsigned char *read_png_ll(const char *path,
-        unsigned int *width, unsigned int *height, unsigned char *channels) {
     printf("low level load start\n");
     png_structp png_ptr = NULL;
     png_infop info_ptr = NULL;
@@ -131,32 +70,27 @@ static unsigned char *read_png_ll(const char *path,
         fclose(fp);
         return NULL;
     }
-
     png_init_io(png_ptr, fp);
 
     png_read_info(png_ptr, info_ptr);
-
     png_uint_32 w, h;
     int bit_depth, color_type;
     int interlace_method;
     png_get_IHDR(png_ptr, info_ptr, &w, &h, &bit_depth, &color_type,
         &interlace_method, NULL, NULL);
     unsigned char ch = png_get_channels(png_ptr, info_ptr);
+    *width = w;
+    *height = h;
+    *channels = ch;
     //png_set_scale_16(png_ptr);
     size_t row_bytes = png_get_rowbytes(png_ptr, info_ptr);
 
-    png_bytep buf = png_malloc(png_ptr, w * h * ch); //png_malloc(png_ptr, row_bytes);
-    // png_read_image(png_ptr, row_ptrs);
+    png_bytep buf = png_malloc(png_ptr, w * h * ch);
 
     for (size_t i = h; i-- > 0;) {
         png_read_row(png_ptr, buf + (i * row_bytes), NULL);
     }
     png_read_end(png_ptr, info_ptr);
-
-    //unsigned char ch = png_get_channels(png_ptr, info_ptr);
-    *width = w;
-    *height = h;
-    *channels = ch;
 
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
     fclose(fp);
@@ -229,7 +163,7 @@ int main(void) {
     unsigned int img_width, img_height;
     unsigned char num_ch;
 
-    unsigned char *tex_buf = read_png_ll("./pop_cat.png", &img_width, &img_height, &num_ch);
+    unsigned char *tex_buf = read_png("./pop_cat.png", &img_width, &img_height, &num_ch);
     //print_tex_data(tex_buf, img_width, img_height, num_col_ch);
 
     GLuint tex;
