@@ -7,6 +7,11 @@
     {
         "directory": "/Users/rpopic2/macgl",
         "file": "*.c",
-        "command": "/usr/bin/clang -Wall -I."
+        "command": "/usr/bin/clang -Wall -I /opt/homebrew/include -I."
+    },
+    {
+        "directory": "/Users/rpopic2/macgl",
+        "file": "*.h",
+        "command": "/usr/bin/clang -Wall -I /opt/homebrew/include -I."
     }
 ]
