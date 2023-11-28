@@ -27,10 +27,14 @@ static const char *read_to_string(const char *path, long *length) {
     return buf;
 }
 
-static void print_tex_data(unsigned char *tex_buf, int img_width, int img_height, int num_col_ch) {
+static void print_tex_data(unsigned char *tex_buf,
+        unsigned int img_width, unsigned int img_height,
+        unsigned char num_col_ch) {
     printf("width: %d, height: %d\n", img_width, img_height);
-    for (int i = 0; i < img_height * img_height * num_col_ch; ++i) {
-        if (i % (img_width * num_col_ch) == 0)
+    size_t img_size = img_height * img_height * num_col_ch;
+    size_t row_size = img_width * num_col_ch;
+    for (size_t i = 0; i < img_size; ++i) {
+        if (i % row_size == 0)
             printf("\n");
         if (i % num_col_ch == 0)
             printf("\t");
@@ -41,7 +45,6 @@ static void print_tex_data(unsigned char *tex_buf, int img_width, int img_height
 
 static unsigned char *read_png(const char *path,
         unsigned int *width, unsigned int *height, unsigned char *channels) {
-    printf("low level load start\n");
     png_structp png_ptr = NULL;
     png_infop info_ptr = NULL;
 
@@ -73,20 +76,21 @@ static unsigned char *read_png(const char *path,
     png_init_io(png_ptr, fp);
 
     png_read_info(png_ptr, info_ptr);
-    png_uint_32 w, h;
-    int bit_depth, color_type;
-    int interlace_method;
-    png_get_IHDR(png_ptr, info_ptr, &w, &h, &bit_depth, &color_type,
-        &interlace_method, NULL, NULL);
+    unsigned int w = png_get_image_width(png_ptr, info_ptr);
+    unsigned int h = png_get_image_height(png_ptr, info_ptr);
     unsigned char ch = png_get_channels(png_ptr, info_ptr);
-    *width = w;
     *height = h;
+    *width = w;
     *channels = ch;
-    //png_set_scale_16(png_ptr);
+
+    png_bytep buf = malloc(w * h * ch);
+    if (!buf) {
+        printf("malloc failed\n");
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        fclose(fp);
+        return NULL;
+    }
     size_t row_bytes = png_get_rowbytes(png_ptr, info_ptr);
-
-    png_bytep buf = png_malloc(png_ptr, w * h * ch);
-
     for (size_t i = h; i-- > 0;) {
         png_read_row(png_ptr, buf + (i * row_bytes), NULL);
     }
@@ -94,7 +98,6 @@ static unsigned char *read_png(const char *path,
 
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
     fclose(fp);
-    printf("load %s w: %d, h: %d, ch: %d\n", path, w, h, ch);
 
     return buf;
 }
@@ -164,7 +167,7 @@ int main(void) {
     unsigned char num_ch;
 
     unsigned char *tex_buf = read_png("./pop_cat.png", &img_width, &img_height, &num_ch);
-    //print_tex_data(tex_buf, img_width, img_height, num_col_ch);
+    // print_tex_data(tex_buf, img_width, img_height, num_ch);
 
     GLuint tex;
     glGenTextures(1, &tex);
