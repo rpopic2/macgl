@@ -148,8 +148,8 @@ int main(void) {
     long vlen, flen;
     const char *vert_src = read_to_string("shader.vert", &vlen);
     const char *frag_src = read_to_string("shader.frag", &flen);
-    glShaderSource(vert, 1, &vert_src, (const GLint *)&vlen);
-    glShaderSource(frag, 1, &frag_src, (const GLint *)&flen);
+    glShaderSource(vert, 1, &vert_src, (GLint *)&vlen);
+    glShaderSource(frag, 1, &frag_src, (GLint *)&flen);
     glCompileShader(vert);
     glCompileShader(frag);
 
@@ -173,9 +173,8 @@ int main(void) {
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
     GLuint internal_format = GL_RGBA;
-    if (num_ch == 3) {
+    if (num_ch == 3)
         internal_format = GL_RGB;
-    }
     glTexImage2D(GL_TEXTURE_2D, 0, internal_format, img_width, img_height,
             0, internal_format, GL_UNSIGNED_BYTE, tex_buf);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -198,6 +197,7 @@ int main(void) {
 
     glDeleteTextures(1, &tex);
     glDeleteProgram(program);
+    glDeleteBuffers(1, &ebo);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
     glfwDestroyWindow(window);
