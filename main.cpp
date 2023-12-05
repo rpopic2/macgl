@@ -3,6 +3,9 @@
 #include <png.h>
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 static const char *read_to_string(const char *path, long *length) {
     FILE *file = fopen(path, "r");
@@ -15,7 +18,7 @@ static const char *read_to_string(const char *path, long *length) {
     fseek(file, 0l, SEEK_SET);
     *length = len;
 
-    char *buf = malloc(len);
+    char *buf = new char[len];
     if (!buf) {
         printf("malloc failed\n");
         return NULL;
@@ -83,7 +86,7 @@ static unsigned char *read_png(const char *path,
     *width = w;
     *channels = ch;
 
-    png_bytep buf = malloc(w * h * ch);
+    png_bytep buf = new unsigned char[w * h * ch];
     if (!buf) {
         printf("malloc failed\n");
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
@@ -115,11 +118,19 @@ int main(void) {
     printf("%s\n", glGetString(GL_VERSION));
     glViewport(0, 0, 400, 400);
 
+    /* float vertex[] = {
+        0.0f, 0.5f, 0.0f, 1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
+        0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f
+    };*/
     float vertex[] = {
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
-        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.0f, 1.0f, 1.0f,
-        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f
+        -0.5f, 0.0f, 0.5f, 0.0f, 0.0f,
+        -0.5f, 0.0f, -0.5f, 1.0f, 0.0f,
+        0.5f, 0.0f, -0.5f, 0.0f, 0.0f,
+        0.5f, 0.0f, 0.5f, 1.0f, 0.0f,
+        0.0f, 0.8f, 0.0f, 0.5f, 1.0f
     };
     GLuint vbo;
     glGenBuffers(1, &vbo);
@@ -136,7 +147,11 @@ int main(void) {
 
     GLuint indicies[] = {
         0, 1, 2,
-        2, 3, 0,
+        0, 2, 3,
+        0, 1, 4,
+        1, 2, 4,
+        2, 3, 4,
+        3, 0, 4,
     };
     GLuint ebo;
     glGenBuffers(1, &ebo);
@@ -160,8 +175,8 @@ int main(void) {
 
     glDeleteShader(vert);
     glDeleteShader(frag);
-    free((void *)vert_src);
-    free((void *)frag_src);
+    delete[] vert_src;
+    delete[] frag_src;
 
     unsigned int img_width, img_height;
     unsigned char num_ch;
@@ -180,17 +195,39 @@ int main(void) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    free(tex_buf);
+    delete[] tex_buf;
 
     glUseProgram(program);
     GLint tex_loc = glGetUniformLocation(program, "tex");
     glUniform1i(tex_loc, 0);
 
+    GLint model_loc = glGetUniformLocation(program, "model");
+    GLint view_loc = glGetUniformLocation(program, "view");
+    GLint proj_loc = glGetUniformLocation(program, "proj");
+
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glEnable(GL_DEPTH_TEST);
+    float rotation = 0.0f;
+    double prev_time = glfwGetTime();
 
     while(!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 view = glm::mat4(1.0f);
+        glm::mat4 proj = glm::mat4(1.0f);
+        double current_time = glfwGetTime();
+        if (current_time - prev_time >= 1.0f / 60.0f) {
+            rotation += 0.5f;
+            prev_time = current_time;
+        }
+        model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
+        view = glm::translate(view, glm::vec3(0.0f, -0.5f, -2.0f));
+        proj = glm::perspective(glm::radians(45.0f), 400.0f / 400.0f, 0.1f, 100.0f);
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, glm::value_ptr(proj));
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawElements(GL_TRIANGLES, sizeof(indicies) / sizeof(float), GL_UNSIGNED_INT, (void *)0);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

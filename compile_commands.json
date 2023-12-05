@@ -2,7 +2,7 @@
     {
         "directory": "/Users/rpopic2/macgl",
         "file": "*.cpp",
-        "command": "/usr/bin/clang++ -Wall -std=c++17"
+        "command": "/usr/bin/clang++ -Wall -std=c++17 -I /opt/homebrew/include -I."
     },
     {
         "directory": "/Users/rpopic2/macgl",
